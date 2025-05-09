@@ -1,7 +1,3 @@
-Here's a polished and well-formatted version for your GitHub README:
-
----
-
 # 🚀 Amazon ECS Standard Deployment with CodePipeline
 
 This project demonstrates a simple CI/CD pipeline using **GitHub**, **AWS CodePipeline**, and **ECS Fargate**, based on the [AWS User Guide](https://docs.aws.amazon.com/codepipeline/latest/userguide/ecs-cd-pipeline.html).
@@ -9,112 +5,6 @@ This project demonstrates a simple CI/CD pipeline using **GitHub**, **AWS CodePi
 ## 🛠️ Project Overview
 
 We create a simple Flask application, containerize it using Docker, push it to Amazon Elastic Container Registry (ECR), and deploy it automatically to Amazon ECS using AWS CodePipeline.
-
----
-
-## 📦 Flask App Setup
-
-### `app.py`
-
-```python
-from flask import Flask, render_template_string
-
-app = Flask(__name__)
-
-@app.route('/')
-def hello():
-    html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Deployment Status</title>
-        <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(to right, #00b09b, #96c93d);
-                color: white;
-                height: 100vh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 0;
-            }
-            .message-box {
-                background: rgba(0, 0, 0, 0.3);
-                padding: 50px;
-                border-radius: 12px;
-                text-align: center;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            }
-            h1 {
-                font-size: 2.5rem;
-                margin-bottom: 0.5em;
-            }
-            p {
-                font-size: 1.3rem;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="message-box">
-            <h1>🚀 Success!</h1>
-            <p>CICD Pipeline with GitHub + AWS CodePipeline + ECS Fargate!!</p>
-        </div>
-    </body>
-    </html>
-    """
-    return render_template_string(html)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-```
-
----
-
-## 🐳 Dockerfile
-
-```dockerfile
-# Base image
-FROM python:3.9-slim
-
-# Set working directory
-WORKDIR /app
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-# Copy app code
-COPY app.py .
-
-# Expose port
-EXPOSE 5000
-
-# Run the app
-CMD ["python", "app.py"]
-```
-
----
-
-## 🔨 Build Docker Image
-
-Run the following command to build the Docker image:
-
-```bash
-docker build -t flask-app:latest .
-```
-
-
-## 🧪 Requirements
-
-Create a `requirements.txt` file:
-
-```
-Flask==2.2.2
-```
-
----
 
 ## 🔨 Build Docker Image
 
@@ -161,46 +51,59 @@ docker push <your-account-id>.dkr.ecr.<your-region>.amazonaws.com/flask-app:late
 * Assign CPU and memory.
 * Set container port to `5000`.
 
-### 2. **Create an ECS Cluster:**
+### 2. **Create an Application Load Balancer:**
+
+* Create an Internet Facing ALB
+* Create a Security Group and attach it to ALB, allow inbound traffic from Port `80` (HTTP) and Port `5000` (Custom TCP) from `0.0.0.0/0`
+
+![image](https://github.com/user-attachments/assets/4583f49f-c0d3-41c1-a743-5cd8c383f527)
+
+* Attach a Listener to ALB to listen on Port `80` (HTTP)
+* Create a Target Group with Port `5000` to allow inbound traffic from target containers
+
+![Resource Map of ALB](https://github.com/user-attachments/assets/79142249-20c0-4b90-a06a-c66a031ffbc9)
+
+### 3. **Create an ECS Cluster:**
 
 * Use **Fargate** and appropriate VPC/subnets.
 
-### 3. **Create a Service:**
+### 4. **Create a Service:**
 
 * Choose your task definition.
 * Use **Fargate** and the same VPC/subnet.
+* Attach the previously created ALB, Listener and Target Group
 
-### 4. **Create a CodePipeline:**
+![image](https://github.com/user-attachments/assets/6ad6a743-aa75-4727-aabb-c9559a6a6651)
 
-Go to **AWS CodePipeline** and:
+### 5. **Create a CodePipeline:**
 
-* **Source stage**: Choose GitHub as your source, connect your repo.
-* **Build stage**: (Optional) Use AWS CodeBuild to run your `docker build` and `docker push` commands.
-* **Deploy stage**: Choose **Amazon ECS (Blue/Green)** or standard ECS deployment, and specify:
+a. **Create a pipeline in AWS CodePipeline**
 
-  * ECS Cluster
-  * ECS Service
-  * Image definition file (usually `imagedefinitions.json`)
+   * Source: GitHub or CodeCommit
+   * Build: CodeBuild (with `buildspec.yml`)
+   * Deploy: ECS (with `imagedefinitions.json`)
 
----
+b. **Set up CodeBuild Project**
 
-## 📁 Sample `imagedefinitions.json`
+   * Enable Docker
+   * Use managed image
 
-Used by CodePipeline to update ECS with the new image:
+c. **Grant ECR Permissions to CodeBuild Role**
 
-```json
-[
-  {
-    "name": "flask-app",
-    "imageUri": "<your-account-id>.dkr.ecr.<your-region>.amazonaws.com/flask-app:latest"
-  }
-]
-```
-
-Generate this in your build step or store it in your repo.
+   * Attach `AmazonEC2ContainerRegistryPowerUser` policy to the CodeBuild role.
 
 ---
 
-![image](https://github.com/user-attachments/assets/4b9f7967-838b-40af-8b87-5ccd3a88903a)
-![image](https://github.com/user-attachments/assets/8298cd33-714b-4847-bff0-866aff305093)
+## ✅ Testing the Pipeline
+
+1. Make a code change.
+2. Commit and push.
+3. Watch the pipeline run on the [CodePipeline Console](https://console.aws.amazon.com/codepipeline/).
+4. Confirm deployment in your ECS service.
+
+---
+
 ![image](https://github.com/user-attachments/assets/d68ee2b6-a2eb-43f7-950f-f10ae8a732e1)
+
+Access the application through DNS name of ALB using `http://<DNS_NAME_OF_ALB>`
+![image](https://github.com/user-attachments/assets/a0988d05-9cbd-4e50-8397-fe1935a3f28e)
