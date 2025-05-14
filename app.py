@@ -40,7 +40,7 @@ def hello():
     <body>
         <div class="message-box">
             <h1>🚀 Success!</h1>
-            <p>CICD Project was a Grand Success!!</p>
+            <p>CICD Pipeline with GitHub + AWS Codepipeline + ECS Fargate!! Changes</p>
         </div>
     </body>
     </html>
